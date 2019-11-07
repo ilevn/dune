@@ -1,0 +1,13 @@
+version: "3.7"
+services:
+  dunehost:
+    hostname: "dunehost"
+    privileged: true
+    image: dune:latest
+    init: true
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      # Use network -> host if you feel like it.
+      - 8080:8080
