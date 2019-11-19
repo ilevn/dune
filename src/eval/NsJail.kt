@@ -1,6 +1,9 @@
 package com.gitlab.ilevn.dune.eval
 
 
+import com.gitlab.ilevn.dune.languages.Kotlin
+import com.gitlab.ilevn.dune.languages.Language
+import com.gitlab.ilevn.dune.languages.Python3
 import mu.KotlinLogging
 import java.io.File
 import java.io.IOException
@@ -19,9 +22,10 @@ private inline fun <R> measureTimeMillisCaptured(block: () -> R): Pair<R, Long> 
     return result to (System.currentTimeMillis() - start)
 }
 
-private fun List<String>.createProcess(): Pair<String, Int>? {
+fun ArgumentList.runWith(with: ArgumentList.ExecBuilder.() -> Unit): Pair<String, Int>? {
+    execOptions(with)
     return try {
-        ProcessBuilder(this)
+        ProcessBuilder(build())
             .redirectOutput(ProcessBuilder.Redirect.PIPE)
             .redirectError(ProcessBuilder.Redirect.PIPE)
             .start()
@@ -39,8 +43,12 @@ private fun List<String>.createProcess(): Pair<String, Int>? {
     }
 }
 
+val languages = hashMapOf(
+    "python" to Python3(),
+    "kotlin" to Kotlin()
+)
 
-class NsJail(private val nsJailBinary: File = NSJAIL_PATH) {
+object NsJail {
     private val logger = KotlinLogging.logger { }
 
     init {
@@ -60,6 +68,7 @@ class NsJail(private val nsJailBinary: File = NSJAIL_PATH) {
 
 
     fun execute(code: String, language: Language): EvalResult? {
+        logger.info("Received new request...")
         logger.debug("Running with code: `$code` and lang args `${language.formatted.joinToString()}`")
 
         val file = language.createFile(code).also {
@@ -68,41 +77,24 @@ class NsJail(private val nsJailBinary: File = NSJAIL_PATH) {
         }
 
         // Random hostname, why not.
-        val hostname = listOf("0x1", "memes", "nice", "easteregg", "arremsmells").random().also {
+        val hstName = listOf("0x1", "memes", "nice", "easteregg", "arremsmells").random().also {
             logger.debug("Random hostname will be `$it`.")
         }
 
         val log = createTempFile(suffix = ".log")
         logger.debug("Log file created at ${log.absolutePath}")
 
-        // TODO: Extract into configurable ArgumentList class.
-        val arguments = listOf(
-            nsJailBinary.absolutePath,
-            "-Mo", "--rlimit_as", "2450",
-            "--chroot", "/", "-E", "LANG=en_US.UTF-8",
-            "-R/usr", "-R/lib", "-R/lib64",
-            "--user", "65534",
-            "--group", "65534",
-            "--time_limit", "10",
-            "--disable_proc",
-            "--iface_no_lo",
-            "--log", log.absolutePath,
-            "-H", hostname,
-            "--cgroup_mem_mount", CGROUP_MEMORY_PARENT.parent,
-            "--cgroup_mem_parent", CGROUP_MEMORY_PARENT.name,
-            "--cgroup_pids_max=20",
-            "--cgroup_pids_mount", CGROUP_PIDS_PARENT.parent,
-            "--cgroup_pids_parent", CGROUP_PIDS_PARENT.name,
-            "-v",
-            "--",
-            *language.formatted, file.absolutePath
 
-        )
-        logger.debug("Calling NsJail with ${arguments.joinToString(" ")}")
-        logger.info("Received new request...")
-
-        val (proc, time) = measureTimeMillisCaptured {
-            arguments.createProcess()
+        val (proc, time) = language.arguments.run {
+            measureTimeMillisCaptured {
+                runWith {
+                    this.language = language
+                    filePath = file.absolutePath
+                    verbose = true
+                    hostname = hstName
+                    logFile = log
+                }
+            }
         }
 
         return proc?.let { EvalResult(it.first, it.second, time) }
