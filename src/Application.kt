@@ -23,7 +23,7 @@ import io.ktor.routing.routing
 import org.slf4j.event.Level
 
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 
 @KtorExperimentalLocationsAPI
 @Suppress("unused")
@@ -45,11 +45,11 @@ fun Application.module(testing: Boolean = false) {
 
     routing {
         get("/") {
-            call.respondText("Dune API v.0.0.1", contentType = ContentType.Text.Plain)
+            call.respondText("Dune API v.0.0.2", contentType = ContentType.Text.Plain)
         }
 
         route("/api") {
-            apiEval(NsJail())
+            apiEval(NsJail)
         }
 
         install(StatusPages) {
@@ -65,5 +65,6 @@ fun Application.module(testing: Boolean = false) {
 
 // TODO: Add digest auth.
 class AuthenticationException : RuntimeException()
+
 class AuthorizationException : RuntimeException()
 

@@ -1,5 +1,6 @@
 package com.gitlab.ilevn.dune.routes
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.gitlab.ilevn.dune.eval.NsJail
 import com.gitlab.ilevn.dune.eval.languages
 import io.ktor.application.call
@@ -20,7 +21,7 @@ import mu.KotlinLogging
 @Location("/eval")
 class Eval
 
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class SuppliedLanguage(val code: String, val language: String)
 
 @KtorExperimentalLocationsAPI
