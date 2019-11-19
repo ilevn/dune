@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.gitlab.ilevn.dune"
-version = "0.0.1"
+version = "0.0.2"
 
 application {
     mainClassName = "io.ktor.server.netty.EngineMain"
